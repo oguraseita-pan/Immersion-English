@@ -26,7 +26,7 @@
   body{min-height:100dvh;
     background:radial-gradient(120% 60% at 80% -10%, rgba(111,194,139,.10), transparent 60%),
       radial-gradient(90% 50% at -10% 10%, rgba(232,185,100,.05), transparent 55%),var(--bg);}
-  .wrap{max-width:560px;margin:0 auto;padding:20px 16px;
+  .wrap{max-width:560px;margin:0 auto;padding:calc(env(safe-area-inset-top) + 18px) 16px 0;
     padding-bottom:calc(var(--navh) + env(safe-area-inset-bottom) + 28px)}
   .tab{display:none}
   .tab.active{display:block;animation:fade .18s ease}
@@ -75,6 +75,8 @@
   .dot{width:10px;height:10px;border-radius:50%;background:var(--line);transition:background .2s,transform .2s}
   .dot.on{background:var(--honey);transform:scale(1.15);box-shadow:0 0 10px rgba(232,185,100,.5)}
   .dots .dlab{font-size:11px;font-weight:700;color:var(--ink-faint);letter-spacing:.08em;text-transform:uppercase;margin-right:4px}
+  .cap{margin:6px 16px 4px;min-height:54px;padding:12px 14px;border-radius:12px;background:rgba(0,0,0,.22);font-size:17px;line-height:1.55;color:var(--ink);font-weight:500}
+  .cap mark{background:transparent;color:var(--honey);font-weight:800;border-bottom:2px solid rgba(232,185,100,.5);padding-bottom:1px}
   .status{margin:0 16px;font-size:12.5px;color:var(--ink-faint);font-weight:600;min-height:0;transition:min-height .1s}
   .status:not(:empty){min-height:16px;margin-bottom:6px}
   .status.warn{color:var(--honey)}
@@ -100,7 +102,7 @@
   input[type=range].spd::-moz-range-thumb{width:22px;height:22px;border-radius:50%;background:var(--ink);border:3px solid var(--leaf);cursor:pointer}
   .spd-ticks{display:flex;justify-content:space-between;font-size:10px;color:var(--ink-faint);font-weight:700;font-variant-numeric:tabular-nums}
 
-  .toggles{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
+  .toggles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
   .toggle{display:flex;align-items:center;justify-content:space-between;background:var(--card);border:1px solid var(--line);border-radius:var(--radius-sm);padding:13px 14px;font-size:13.5px;font-weight:600;color:var(--ink-dim);cursor:pointer}
   .sw{width:40px;height:23px;border-radius:20px;background:var(--line);position:relative;flex:none;transition:.15s}
   .sw::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--ink);transition:.15s}
@@ -161,6 +163,8 @@
   .sheet-act button:hover{border-color:var(--leaf-deep)}
   .sheet-act button.accent{background:var(--leaf);color:#0c1510;border-color:transparent;font-weight:800;justify-content:center}
   .sheet-act button.warn{color:var(--danger)}
+  .sheet-act button.pc-save-btn{padding:17px;font-size:16.5px}
+  .sheet-act button.pc-practice-btn{padding:10px;font-size:13.5px;justify-content:center;color:var(--ink-dim)}
 
   .toast{position:fixed;left:50%;bottom:calc(var(--navh) + 24px);transform:translateX(-50%);background:var(--leaf);color:#0c1510;font-weight:800;font-size:13px;padding:11px 18px;border-radius:30px;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;white-space:nowrap}
   .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px)}
@@ -204,6 +208,7 @@
       <div class="clipnum"><b id="clipCur">0</b><span id="clipTot">/ 0</span><span class="lab">clip</span></div>
       <div class="dots"><span class="dlab">repeat</span><span id="dots"></span></div>
     </div>
+    <div class="cap" id="cap">フレーズを検索すると、ネイティブが実際に使っている動画が次々に再生されます。</div>
     <div class="status" id="status"></div>
     <div class="transport">
       <button class="tbtn" id="prevBtn" title="前へ">⏮</button>
@@ -228,6 +233,7 @@
   </div>
 
   <div class="toggles">
+    <div class="toggle on" id="capToggle"><span>字幕を表示</span><span class="sw"></span></div>
     <div class="toggle on" id="autoToggle"><span>自動で次へ</span><span class="sw"></span></div>
   </div>
 </div></section>
@@ -246,6 +252,9 @@
   <div class="sblock"><h3>データ</h3>
     <div class="srow"><div><div class="t">保存フレーズ</div><div class="d">これまでに保存した数</div></div><div class="v" id="stPhrases">0</div></div>
     <div class="srow"><div><div class="t">フォルダ</div><div class="d">受信箱を含む</div></div><div class="v" id="stFolders">0</div></div>
+  </div>
+  <div class="sblock"><h3>保存先</h3>
+    <div class="srow" id="saveFolderRow"><div><div class="t">フレーズの保存先</div><div class="d">ホームの「★ フレーズを保存」で入れるフォルダ</div></div><div class="v" id="saveFolderVal">受信箱</div></div>
   </div>
   <div class="sblock"><h3>バックアップ</h3>
     <div class="srow" id="exportBtn"><div><div class="t">エクスポート</div><div class="d">すべてのデータをJSONで保存</div></div><div class="chev">⤓</div></div>
@@ -304,7 +313,7 @@ window.onYouglishAPIReady=function(){
   if(ygTimer)clearTimeout(ygTimer);ygFailed=false;
   try{
     widget=new YG.Widget("yg",{components:0,autoStart:1,events:{
-      onFetchDone:onFetchDone,onVideoChange:onVideoChange,onCaptionConsumed:onCaptionConsumed,
+      onFetchDone:onFetchDone,onVideoChange:onVideoChange,onCaptionChange:onCaptionChange,onCaptionConsumed:onCaptionConsumed,
       onPlayerStateChange:onPlayerState,onPlayerReady:function(){applySpeed();},onError:onError}});
     ygReady=true;$("status").classList.remove("warn");$("status").textContent="";
     if(pending){runSearch(pending.q,pending.a);pending=null;}
@@ -317,6 +326,8 @@ function onFetchDone(e){
   updateMeter();
 }
 function onVideoChange(e){clipCount++;plays=0;updateMeter();}
+function onCaptionChange(e){renderCaption(e.caption);}
+function renderCaption(text){var cap=$("cap");if(!S.captionOn){cap.style.display="none";return;}cap.style.display="";var t=String(text).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");t=t.replace(/\[\[\[/g,"<mark>").replace(/\]\]\]/g,"</mark>");cap.innerHTML=t;}
 function onCaptionConsumed(e){
   if(!S.autoAdvance)return;plays++;updateDots();
   if(plays<S.loops)widget.replay();
@@ -333,7 +344,7 @@ function search(){
   if(!ygReady){pending={q:q,a:currentAccent};setStatus("プレーヤーを読み込み中…");return;}
   runSearch(q,currentAccent);
 }
-function runSearch(q,a){$("status").classList.remove("warn");setStatus("検索中…");if(a)widget.fetch(q,"english",a);else widget.fetch(q,"english");}
+function runSearch(q,a){$("status").classList.remove("warn");setStatus("検索中…");if(S.captionOn){$("cap").style.display="";$("cap").textContent="読み込み中…";}if(a)widget.fetch(q,"english",a);else widget.fetch(q,"english");}
 function setStatus(t){var s=$("status");s.classList.remove("warn");s.textContent=t;}
 function updateMeter(){$("clipCur").textContent=total?Math.max(1,Math.min(clipCount,S.clips)):0;$("clipTot").textContent="/ "+(total?Math.min(S.clips,total):0);updateDots();}
 function updateDots(){var box=$("dots");box.innerHTML="";for(var i=0;i<S.loops;i++){var d=document.createElement("span");d.className="dot"+(i<plays?" on":"");box.appendChild(d);}}
@@ -361,6 +372,8 @@ safe("home-settings",function(){
     b.onclick=function(){$("quickAcc").querySelectorAll("button").forEach(function(x){x.classList.remove("sel")});b.classList.add("sel");$("accent").value=b.dataset.a;S.lastAccent=b.dataset.a;saveSettings();if(currentPhrase&&ygReady){currentAccent=b.dataset.a;runSearch(currentPhrase,currentAccent);}};
   });
   $("accent").value=S.lastAccent||"us";
+  bindToggle("capToggle","captionOn",function(){$("cap").style.display=S.captionOn?"":"none";});
+  if(!S.captionOn)$("cap").style.display="none";
   bindToggle("autoToggle","autoAdvance");
 });
 function applySpeed(){if(widget&&widget.setSpeed)widget.setSpeed(S.speed);}
@@ -371,8 +384,9 @@ safe("save-btn",function(){
     var q=$("q").value.trim();if(!q)return;var acc=$("accent").value;
     var dup=Object.keys(DATA.phrases).some(function(k){var p=DATA.phrases[k];return p.text===q&&p.accent===acc;});
     if(dup){toast("すでに保存済みです");return;}
-    var id=uid();DATA.phrases[id]={id:id,text:q,accent:acc,memo:"",folderId:"inbox",ts:Date.now()};
-    saveData();toast("受信箱に保存しました");if($("tab-note").classList.contains("active"))renderNote();refreshStats();
+    var dest=DATA.folders[S.saveFolder]?S.saveFolder:"inbox";
+    var id=uid();DATA.phrases[id]={id:id,text:q,accent:acc,memo:"",folderId:dest,ts:Date.now()};
+    saveData();toast("「"+folderName(dest)+"」に保存しました");if($("tab-note").classList.contains("active"))renderNote();refreshStats();
   };
 });
 
@@ -419,8 +433,8 @@ function openPhraseCard(p){
     '<div class="pc-label">フレーズ（編集可）</div><input id="pcText" type="text" value="'+esc(p.text)+'">'+
     '<div class="pc-label">メモ</div><textarea id="pcMemo" class="pc-memo" placeholder="意味・使い方・気づきなど">'+esc(p.memo||"")+'</textarea>'+
     '<div class="sheet-act">'+
-      '<button class="accent" id="pcPractice"><span>▶</span><span>このフレーズを練習</span></button>'+
-      '<button id="pcSave"><span>💾</span><span>保存</span></button>'+
+      '<button class="accent pc-save-btn" id="pcSave"><span>💾</span><span>保存</span></button>'+
+      '<button class="pc-practice-btn" id="pcPractice"><span>▶</span><span>このフレーズを練習</span></button>'+
     '</div>';
   $("overlay").classList.add("show");
   function commit(){var t=$("pcText").value.trim();if(t)p.text=t;p.memo=$("pcMemo").value;saveData();}
@@ -436,7 +450,7 @@ function phraseMenu(p){
 function folderMenu(f){
   openSheet(f.name,[
     {label:"名前を変更",icon:"✎",fn:function(){promptText("フォルダ名",f.name,function(v){if(v){f.name=v;saveData();renderNote();}});}},
-    {label:"このフォルダを削除",icon:"🗑",warn:true,fn:function(){closeSheet();phrasesIn(f.id).forEach(function(p){p.folderId="inbox";});folderChildren(f.id).forEach(function(c){c.parentId=f.parentId;});delete DATA.folders[f.id];saveData();if(curFolder===f.id)curFolder=f.parentId;renderNote();refreshStats();toast("フォルダを削除しました（中のフレーズは受信箱へ）");}}
+    {label:"このフォルダを削除",icon:"🗑",warn:true,fn:function(){closeSheet();phrasesIn(f.id).forEach(function(p){p.folderId="inbox";});folderChildren(f.id).forEach(function(c){c.parentId=f.parentId;});delete DATA.folders[f.id];if(S.saveFolder===f.id){S.saveFolder="inbox";saveSettings();}saveData();if(curFolder===f.id)curFolder=f.parentId;renderNote();refreshStats();toast("フォルダを削除しました（中のフレーズは受信箱へ）");}}
   ]);
 }
 function movePhrase(p){var all=allFoldersFlat().filter(function(x){return x.id!==p.folderId;});openSheet("移動先を選択",all.map(function(f){return {label:f.indent+f.name,icon:f.id==="inbox"?"📥":"📁",fn:function(){p.folderId=f.id;saveData();closeSheet();renderNote();toast(f.name+" へ移動しました");}};}));}
@@ -444,7 +458,9 @@ function allFoldersFlat(){var out=[];(function walk(pid,depth){var arr=(pid===nu
 safe("note-newfolder",function(){$("newFolderBtn").onclick=function(){promptText("新しいフォルダ名","",function(v){if(!v)return;var id=uid();DATA.folders[id]={id:id,name:v,parentId:(curFolder===null?null:curFolder)};saveData();renderNote();refreshStats();});};});
 
 /* Settings */
-function refreshStats(){$("stPhrases").textContent=Object.keys(DATA.phrases).length;$("stFolders").textContent=Object.keys(DATA.folders).length;}
+function folderName(id){return (DATA.folders[id]&&DATA.folders[id].name)||"受信箱";}
+function updateSaveFolderLabel(){var el=$("saveFolderVal");if(el)el.textContent=folderName(DATA.folders[S.saveFolder]?S.saveFolder:"inbox");}
+function refreshStats(){$("stPhrases").textContent=Object.keys(DATA.phrases).length;$("stFolders").textContent=Object.keys(DATA.folders).length;updateSaveFolderLabel();}
 safe("settings",function(){
   $("exportBtn").onclick=function(){var blob=new Blob([JSON.stringify({app:"immersion",version:3,data:DATA,settings:S,exportedAt:new Date().toISOString()},null,2)],{type:"application/json"});var a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="immersion-backup-"+new Date().toISOString().slice(0,10)+".json";a.click();setTimeout(function(){URL.revokeObjectURL(a.href);},2000);toast("バックアップを書き出しました");};
   $("importBtn").onclick=function(){$("importFile").click();};
@@ -452,6 +468,7 @@ safe("settings",function(){
   $("resetSettingsBtn").onclick=function(){openSheet("再生設定をリセット",[{label:"初期値に戻す（リピート3・クリップ9・0.75×）",icon:"↺",accent:true,fn:function(){S.loops=3;S.clips=9;S.speed=0.75;saveSettings();closeSheet();buildHomeSettings();$("spd").value=0.75;$("spdVal").textContent="0.75×";applySpeed();updateMeter();toast("リセットしました");}},{label:"キャンセル",icon:"✕",fn:closeSheet}]);};
   $("wipeBtn").onclick=function(){openSheet("すべて削除しますか？",[{label:"フレーズもフォルダも完全に削除",icon:"🗑",warn:true,fn:function(){try{localStorage.removeItem("shadow_data");localStorage.removeItem("shadow_settings");}catch(_){}DATA=loadData();S=loadSettings();curFolder=null;saveData();saveSettings();closeSheet();renderNote();refreshStats();buildHomeSettings();$("spd").value=S.speed;$("spdVal").textContent=fmtSpeed(S.speed);toast("初期化しました");}},{label:"キャンセル",icon:"✕",fn:closeSheet}]);};
   $("aboutRow").onclick=function(){openSheet("Immersion Learning",[{label:"YouGlish を開く",icon:"↗",fn:function(){window.open("https://youglish.com","_blank");}},{label:"YouTube 利用規約",icon:"↗",fn:function(){window.open("https://www.youtube.com/t/terms","_blank");}},{label:"閉じる",icon:"✕",accent:true,fn:closeSheet}]);};
+  $("saveFolderRow").onclick=function(){openSheet("保存先フォルダを選択",allFoldersFlat().map(function(f){return {label:f.indent+f.name,icon:f.id==="inbox"?"📥":"📁",fn:function(){S.saveFolder=f.id;saveSettings();updateSaveFolderLabel();closeSheet();toast("保存先を「"+f.name+"」に変更しました");}};}));};
 });
 
 /* overlay */
@@ -466,7 +483,7 @@ function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").repl
 function toast(msg){var t=$("toast");t.textContent=msg;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(function(){t.classList.remove("show");},1800);}
 
 /* storage */
-function loadSettings(){try{var s=JSON.parse(localStorage.getItem("shadow_settings")||"{}");return {loops:+s.loops||3,clips:+s.clips||9,speed:+s.speed||0.75,autoAdvance:s.autoAdvance!==false,lastAccent:s.lastAccent||"us"};}catch(e){return {loops:3,clips:9,speed:0.75,autoAdvance:true,lastAccent:"us"};}}
+function loadSettings(){try{var s=JSON.parse(localStorage.getItem("shadow_settings")||"{}");return {loops:+s.loops||3,clips:+s.clips||9,speed:+s.speed||0.75,captionOn:s.captionOn!==false,autoAdvance:s.autoAdvance!==false,lastAccent:s.lastAccent||"us",saveFolder:s.saveFolder||"inbox"};}catch(e){return {loops:3,clips:9,speed:0.75,captionOn:true,autoAdvance:true,lastAccent:"us",saveFolder:"inbox"};}}
 function saveSettings(){try{localStorage.setItem("shadow_settings",JSON.stringify(S));}catch(e){}}
 function loadData(){try{var d=JSON.parse(localStorage.getItem("shadow_data")||"null");if(d&&d.folders&&d.phrases){if(!d.folders.inbox)d.folders.inbox={id:"inbox",name:"受信箱",parentId:null,system:true};return d;}}catch(e){}var seed={folders:{},phrases:{}};seed.folders.inbox={id:"inbox",name:"受信箱",parentId:null,system:true};var a=uid();seed.folders[a]={id:a,name:"日常生活",parentId:null};var b=uid();seed.folders[b]={id:b,name:"ビジネス",parentId:null};return seed;}
 function saveData(){try{localStorage.setItem("shadow_data",JSON.stringify(DATA));}catch(e){}}
